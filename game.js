@@ -1,13 +1,35 @@
 'use strict'
 
+
+function randRange(start, stop) {
+    return parseInt(Math.random()*(stop-start) + start);
+}
+
+function randMax(max) {
+    return randRange(0, max);
+}
+
 class Vector {
 	constructor(x, y) {
 		this.x = x;
 		this.y = y;
 	}
-	getCopy() {
-		return new Vector(this.x, this.y);
-	}
+    set(v) {
+        this.x = v.x;
+        this.y = v.y;
+    }
+    add(v) {
+        return new Vector(this.x+v.x, this.y+v.y);
+    }
+    mul(s) {
+        return new Vector(s*this.x, s*this.y);
+    }
+    sub(v) {
+        return this.add( v.mul(-1) );
+    }
+    equal(v) {
+        return this.x == v.x && this.y == v.y;
+    }
 }
 
 class Segment {
@@ -15,11 +37,11 @@ class Segment {
 		this.start = start;
 		this.end = end;
 	}
-	side(vector) {
-		var x = vector.x;
-		var y = vector.y;
-		return (x - this.start.x) * (this.end.y - this.start.y) - (y - this.start.y) * (this.end.x - this.start.x); 
-	}
+    length() {
+        var x1 = this.start.x, y1 = this.start.y;
+        var x2 = this.end.x, y2 = this.end.y;
+        return Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+    }
 	draw() {
 		context.beginPath();
 		context.moveTo(this.start.x, this.start.y);
@@ -27,6 +49,85 @@ class Segment {
 		context.stroke();
 		context.closePath();
 	}
+}
+
+class Polygon {
+    constructor(vers) {
+        this.vertices = vers;
+
+        for (var i = 0; i < vers.length-1; i++) {
+            var f = vers[i];
+            var s = vers[i+1];
+            segments.push( new Segment(f, s) );
+        }
+        var f = vers[vers.length-1];
+        var s = vers[0];
+        segments.push( new Segment(f, s) );
+    }
+    add(vec) {
+        this.vertices.forEach(function(ver) {
+            ver.set(ver.add(vec));
+        });
+    }
+}
+
+class RandomPolygon extends Polygon {
+    constructor() {
+        var len = randRange(4, 10);
+        var vers = [];
+        for (var i = 0; i < len; i++) {
+            vers.push( new Vector(randMax(200), randMax(200)) );
+        }
+        console.log(vers);
+        super(vers);
+    }
+}
+
+class Square extends Polygon {
+    constructor(w, h) {
+        super([
+            new Vector(0, 0),
+            new Vector(w, 0),
+            new Vector(w, h),
+            new Vector(0, h)
+        ]);
+    }
+}
+
+
+class Enemy {
+    constructor() {
+        this.width = 30;
+        this.height = 30;
+        this.velocity = 3;
+
+        this.right = new Vector(1, 0);
+        this.down = new Vector(0, 1);
+        this.left = new Vector(-1, 0);
+        this.up = new Vector(0, -1);
+        this.dir = this.right;
+
+        this.origin = new Vector( randMax(canvas.width-this.width*2), randMax(canvas.height-this.height*2) );
+        this.polygon = new RandomPolygon();
+
+        var offset = this.origin;
+        this.polygon.add(offset);
+    }
+    move() {
+        if (this.dir == this.right && this.origin.x >= canvas.width - this.width*5) { 
+           this.dir = this.down;
+        } else if (this.dir == this.down && this.origin.y >= canvas.height - this.height*5) {
+           this.dir = this.left;
+        } else if (this.dir == this.left && this.origin.x <= this.width*5) {
+           this.dir = this.up;
+        } else if (this.dir == this.up && this.origin.y <= this.height*5) {
+            this.dir = this.right;
+        }
+
+        var moveVec = this.dir.mul(this.velocity);
+        this.polygon.add(moveVec);
+        this.origin = this.origin.add(moveVec);
+    }
 }
 
 function area_determinant (p1, p2, p3) {
@@ -110,8 +211,6 @@ function canvasIntersectionPoint(seg) {
 	}	
 }
 
-function update() {}
-
 function updatePolygons() {
 	polygons = [];
 
@@ -185,17 +284,23 @@ function updatePolygons() {
 	}
 }
 
+function drawPolygon(poly, fill, stroke) {
+    context.beginPath();
+    context.moveTo(poly[0].x, poly[0].y);
+    for (var j=1; j<poly.length; j++) {
+        context.lineTo(poly[j].x, poly[j].y);
+    }
+    context.closePath();
+    if (stroke)
+        context.stroke();
+    if (fill)
+        context.fill();
+}
+
 function drawPolygons() {
 	if (segments.length >= 1) {
 		for (var i=0; i<polygons.length; i++) {
-			context.beginPath();
-			context.moveTo(polygons[i][0].x, polygons[i][0].y);
-			for (var j=1; j<polygons[i].length; j++) {
-				context.lineTo(polygons[i][j].x, polygons[i][j].y);
-			}
-			context.closePath();
-			context.stroke();
-			context.fill();
+            drawPolygon(polygons[i], true, false);
 		}
 	}
 }
@@ -204,7 +309,13 @@ function draw() {
 	context.fillStyle = "black";
 	context.fillRect(0, 0, canvas.width, canvas.height);
 
-	var gradient = context.createRadialGradient(lightSource.x, lightSource.y, 1000, lightSource.x, lightSource.y, 0);
+    segments.forEach(function(seg) {
+		context.strokeStyle = 'rgba(255, 0, 0, ' + 1 + ')';
+		context.lineWidth = 1;
+		seg.draw();
+	});
+
+	var gradient = context.createRadialGradient(lightSource.x, lightSource.y, lightRadius, lightSource.x, lightSource.y, 0);
 	gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
 	gradient.addColorStop(1, 'rgba(255, 255, 0, 1)');
 	context.fillStyle = gradient;
@@ -214,47 +325,56 @@ function draw() {
 	context.strokeStyle = "black";
 	drawPolygons();
 
-	for (var i=0; i<segments.length; i++) {
-		var rgbStr = "blue";
-		context.strokeStyle = rgbStr;
-		context.lineWidth = 1;
-		segments[i].draw();
-	}
-
 	context.fillStyle = "green";
 	context.fillRect(lightSource.x - pointSize / 2, lightSource.y - pointSize / 2, pointSize, pointSize);
 }
 
+function update() {
+    enemies.forEach(function(en) {
+        en.move();
+    });
+    lightSource.x += vx;
+    lightSource.y += vy;
+    updatePolygons();
+}
+
 var segments = [];
 var polygons = [];
-var boundPoint = null;
 var lightSource = new Vector(canvas.width / 2, canvas.height / 2);
+var lightRadius = 1000;
 var pointSize = 10;
-var updateDensity = 10, moveCounter = 0;
+var vx = 0, vy = 0;
+var v = 2;
 
-function mousemove() {
-	if (boundPoint) {
-		boundPoint.x = mouseX;
-		boundPoint.y = mouseY;
-        updatePolygons();
-	}
+function keydown(key) {
+    switch(key) {
+        case 'w':
+            vy = -v;
+            break;
+        case 's':
+            vy = +v;
+            break;
+        case 'a':
+            vx = -v;
+            break;
+        case 'd':
+            vx = +v;
+            break;
+    }
+}
+function keyup(key) {
+    if (key == 'w' || key == 's')
+        vy = 0;
+    if (key == 'a' || key == 'd')
+        vx = 0;
 }
 
-function mousedown() {
-	if (boundPoint) {
-		boundPoint = null;
-	} else {
-		if (areColliding(lightSource.x - pointSize / 2, lightSource.y - pointSize / 2, pointSize, pointSize,
-						mouseX, mouseY, 1, 1)) {
-			boundPoint = lightSource;
-		} else {
-			segments.push(new Segment(
-				new Vector(mouseX, mouseY),
-				new Vector(mouseX, mouseY)
-			));
-			boundPoint = segments[segments.length - 1].end;
-		}
+var spawnInterval = 10000;
+var enemies = [];
 
-		updatePolygons();
-	}
+function spawn() {
+    enemies.push(new Enemy());
+    setTimeout(spawn, spawnInterval);
 }
+
+spawn();

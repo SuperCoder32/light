@@ -20,6 +20,29 @@ if (fullScreen) {
     canvas.height = window.outerHeight;
 }
 
+window.addEventListener('keydown', function(ev) {
+    ev.stopPropagation();
+    keydown(ev.key, ev.keyCode);
+});
+window.addEventListener('keyup', function(ev) {
+    ev.stopPropagation();
+    keyup(ev.key, ev.keyCode);
+});
+canvas.addEventListener('mousemove', function(ev) {
+    ev.stopPropagation();
+    mouseX = ev.pageX - canvas.offsetLeft;
+    mouseY = ev.pageY - canvas.offsetTop;
+    mousemove();
+});
+canvas.addEventListener('mousedown', function(ev) {
+    ev.stopPropagation();
+    mousedown();
+});
+canvas.addEventListener('mouseup', function(ev) {
+    ev.stopPropagation();
+    mouseup();
+});
+
 if (isMobile()) {
 	canvas.addEventListener('touchstart', function (ev) {
 		var touchobj = ev.changedTouches[0];
@@ -38,29 +61,6 @@ if (isMobile()) {
 		mouseX = parseInt(touchobj.pageX - canvas.offsetLeft);
 		mouseY = parseInt(touchobj.pageY - canvas.offsetTop);
 		mousemove();
-	});
-} else {
-	canvas.addEventListener('keydown', function(ev) {
-		ev.stopPropagation();
-		keydown(ev.key, ev.keyCode);
-	});
-	canvas.addEventListener('keyup', function(ev) {
-		ev.stopPropagation();
-		keyup(ev.key, ev.keyCode);
-	});
-	canvas.addEventListener('mousemove', function(ev) {
-		ev.stopPropagation();
-		mouseX = ev.pageX - canvas.offsetLeft;
-		mouseY = ev.pageY - canvas.offsetTop;
-		mousemove();
-	});
-	canvas.addEventListener('mousedown', function(ev) {
-		ev.stopPropagation();
-		mousedown();
-	});
-	canvas.addEventListener('mouseup', function(ev) {
-		ev.stopPropagation();
-		mouseup();
 	});
 }
 
