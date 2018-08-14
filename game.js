@@ -1,6 +1,5 @@
 'use strict'
 
-
 function randRange(start, stop) {
     return parseInt(Math.random()*(stop-start) + start);
 }
@@ -310,15 +309,28 @@ function draw() {
 	context.fillRect(0, 0, canvas.width, canvas.height);
 
     segments.forEach(function(seg) {
-		context.strokeStyle = 'rgba(255, 0, 0, ' + 1 + ')';
-		context.lineWidth = 1;
+        var x1 = seg.start.x, y1 = seg.start.y;
+        var x2 = seg.end.x, y2 = seg.end.y;
+
+        var startDist = new Segment(seg.start, lightSource).length();
+        var endDist = new Segment(seg.end, lightSource).length();
+
+        var startOpacity = startDist <= lightRadius? (lightRadius-startDist)/lightRadius: 0;
+        var endOpacity = endDist <= lightRadius? (lightRadius-endDist)/lightRadius: 0;
+
+        var grd = context.createLinearGradient(x1, y1, x2, y2);
+        grd.addColorStop(0, 'rgba(255, 0, 0, ' + startOpacity + ')');
+        grd.addColorStop(1, 'rgba(255, 0, 0, ' + endOpacity + ')');
+
+		context.strokeStyle = grd;
+		context.lineWidth = 8;
 		seg.draw();
 	});
 
-	var gradient = context.createRadialGradient(lightSource.x, lightSource.y, lightRadius, lightSource.x, lightSource.y, 0);
-	gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-	gradient.addColorStop(1, 'rgba(255, 255, 0, 1)');
-	context.fillStyle = gradient;
+	var grd = context.createRadialGradient(lightSource.x, lightSource.y, lightRadius, lightSource.x, lightSource.y, 0);
+	grd.addColorStop(0, 'rgba(0, 0, 0, 0)');
+	grd.addColorStop(1, 'rgba(255, 255, 0, 1)');
+	context.fillStyle = grd;
 	context.fillRect(0, 0, canvas.width, canvas.height);
 
 	context.fillStyle = "black";
@@ -341,7 +353,7 @@ function update() {
 var segments = [];
 var polygons = [];
 var lightSource = new Vector(canvas.width / 2, canvas.height / 2);
-var lightRadius = 1000;
+var lightRadius = 500;
 var pointSize = 10;
 var vx = 0, vy = 0;
 var v = 2;
